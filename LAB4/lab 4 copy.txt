@@ -1,0 +1,178 @@
+// lalloc code here
+    sizehdr = 16;
+    int size;
+    if (amt % sizehdr == 0)
+    {
+        size = amt + 2 * sizehdr;
+    }
+    else
+    {
+        size = amt - amt % sizehdr + 3 * sizehdr;
+    }
+    
+    int i = anchor.succesr;
+    while (hdr_payload(i) < size && hdr_succesr(i) != heapsize)
+    {
+        i = hdr_succesr(i);
+    }
+    
+    if (hdr_payload(i) > size)
+    {
+        //test if the allocated block used to be succesr of anchor
+        if (hdr_previus(i) == -1)
+        {
+            anchor.succesr = i + size;
+            hdr_previus(i + size) = -1;
+            hdr_succesr(i + size) = hdr_succesr(i);
+            hdr_previus(i) = 0;
+            hdr_succesr(i) = 0;
+            
+        }
+        else
+        {
+            hdr_previus(hdr_succesr(i)) = i + size;
+            hdr_succesr(hdr_previus(i)) = i + size;
+            hdr_previus(i + size) = hdr_previus(i);
+            hdr_succesr(i + size) = hdr_succesr(i);
+            hdr_previus(i) = 0;
+            hdr_succesr(i) = 0;
+        }
+        
+        //update footer of newly allocated block
+        hdr_freeall(i + size - sizehdr) = 1;
+        hdr_payload(i + size - sizehdr) = size - 2 * sizehdr;
+        hdr_previus(i + size - sizehdr) = 0;
+        hdr_succesr(i + size - sizehdr) = 0;
+        
+        //update header of free fragment
+        hdr_freeall(i + size) = 0;
+        hdr_payload(i + size) = hdr_payload(i) - hdr_payload(i + size - sizehdr) - 2 * sizehdr;
+        
+        //update footer of free fragment
+        hdr_freeall(i + sizehdr + hdr_payload(i)) = 0;
+        hdr_payload(i + sizehdr + hdr_payload(i)) = hdr_payload(i + size);
+        hdr_previus(i + sizehdr + hdr_payload(i)) = 0;
+        hdr_succesr(i + sizehdr + hdr_payload(i)) = 0;
+        ssa
+        //update header of newly allocated block
+        hdr_freeall(i) = 1;
+        hdr_payload(i) = size - 2 * sizehdr;
+        
+        return i + sizehdr;
+    }
+    else if (hdr_payload(i) == size)
+    {
+        //test if the allocated block used to be succesr of anchor
+        if (hdr_previus(i) == -1)
+        {
+            anchor.succesr = hdr_succesr(i);
+            hdr_previus(anchor.succesr) = -1;
+            hdr_previus(i) = 0;
+            hdr_succesr(i) = 0;
+        }
+        else
+        {
+            hdr_previus(hdr_succesr(i)) = hdr_previus(i);
+            hdr_succesr(hdr_previus(i)) = hdr_succesr(i);
+            hdr_previus(i) = 0;
+            hdr_succesr(i) = 0;
+        }
+        
+        //update footer of newly allocated block
+        hdr_freeall(i + size - sizehdr) = 1;
+        hdr_payload(i + size - sizehdr) = size - 2 * sizehdr;
+        hdr_previus(i + size - sizehdr) = 0;
+        hdr_succesr(i + size - sizehdr) = 0;
+        
+        //update header of newly allocated block
+        hdr_freeall(i) = 1;
+        hdr_payload(i) = size - 2 * sizehdr;
+        
+        return i + sizehdr;
+    }
+    
+    int tempSize;
+    if (!hdr_freeall(heapsize - sizehdr))
+    {
+        tempSize = hdr_payload(heapsize - sizehdr);
+    }
+    else
+    {
+        tempSize = 0;
+    }
+    
+    int originalHeapsize = heapsize;
+    while (tempSize + HEAPSIZE < size)
+    {
+        heap = (char * )realloc(heap, heapsize + HEAPSIZE);
+        heapsize += HEAPSIZE;
+        tempSize += HEAPSIZE;
+    }
+    
+    //initialize reallocated area as a free block
+    hdr_freeall(originalHeapsize) = 0;
+    hdr_payload(originalHeapsize) = heapsize - originalHeapsize - 2 * sizehdr;
+    hdr_previus(originalHeapsize) = i;
+    hdr_succesr(originalHeapsize) = 0;
+    hdr_freeall(heapsize - sizehdr) = 0;
+    hdr_payload(heapsize - sizehdr) = hdr_payload(originalHeapsize);
+    hdr_previus(heapsize - sizehdr) = 0;
+    hdr_succesr(heapsize - sizehdr) = 0;
+    hdr_succesr(i) = originalHeapsize;
+    
+    int freetag = originalHeapsize + sizehdr;
+    lfree(&freetag);
+
+    int newhead = anchor.succesr;
+    if (hdr_payload(newhead) > size)
+    {
+        anchor.succesr = newhead + size;
+        hdr_previus(newhead + size) = -1;
+        hdr_succesr(newhead + size) = heapsize;
+        hdr_previus(newhead) = 0;
+        hdr_succesr(newhead) = 0;
+        
+        //update footer of newly allocated block
+        hdr_freeall(anchor.succesr - sizehdr) = 1;
+        hdr_payload(anchor.succesr - sizehdr) = size - 2 * sizehdr;
+        hdr_previus(anchor.succesr - sizehdr) = 0;
+        hdr_succesr(anchor.succesr - sizehdr) = 0;
+        
+        //update header of free fragment
+        hdr_freeall(anchor.succesr) = 0;
+        hdr_payload(anchor.succesr) = hdr_payload(newhead) - hdr_payload(anchor.succesr - sizehdr) - 2 * sizehdr;
+        
+        //update footer of free fragment
+        hdr_freeall(newhead + sizehdr + hdr_payload(newhead)) = 0;
+        hdr_payload(newhead + sizehdr + hdr_payload(newhead)) = hdr_payload(anchor.succesr);
+        hdr_previus(newhead + sizehdr + hdr_payload(newhead)) = 0;
+        hdr_succesr(newhead + sizehdr + hdr_payload(newhead)) = 0;
+        
+        //update header of newly allocated block
+        hdr_freeall(newhead) = 1;
+        hdr_payload(newhead) = size - 2 * sizehdr;
+        
+        return newhead + sizehdr;
+    }
+    else if (hdr_payload(newhead) == size)
+    {
+        //test if the allocated block used to be succesr of anchor
+        anchor.succesr = hdr_succesr(newhead);
+        hdr_previus(anchor.succesr) = -1;
+        hdr_previus(newhead) = 0;
+        hdr_succesr(newhead) = 0;
+        
+        //update footer of newly allocated block
+        hdr_freeall(newhead + size - sizehdr) = 1;
+        hdr_payload(newhead + size - sizehdr) = size - 2 * sizehdr;
+        hdr_previus(newhead + size - sizehdr) = 0;
+        hdr_succesr(newhead + size - sizehdr) = 0;
+        
+        //update header of newly allocated block
+        hdr_freeall(newhead) = 1;
+        hdr_payload(newhead) = size - 2 * sizehdr;
+        
+        return newhead + sizehdr;
+    }
+    
+    return 0;
